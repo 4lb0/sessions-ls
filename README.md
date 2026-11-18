@@ -1,5 +1,7 @@
 # sessions-ls
 
+<img width="1392" height="916" alt="image" src="https://github.com/user-attachments/assets/cf8872c6-e989-4a04-afb5-b554e1e6abb5" />
+
 List every terminal coding agent (opencode, claude) running in a tmux pane,
 with its session name and status, and jump straight to the pane.
 
