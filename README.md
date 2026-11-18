@@ -7,7 +7,8 @@ with its session name and status, and jump straight to the pane.
 
 ## Install
 
-Needs `tmux` and Python 3 (standard library only, nothing to install).
+Needs `tmux` and Python 3 (standard library only, nothing to install). `fzf`
+is optional: when present, `/` uses it for search.
 
 ```bash
 git clone git@github.com:4lb0/sessions-ls.git ~/self/sessions-ls
@@ -31,10 +32,16 @@ Interactive keys:
 | key            | action                          |
 | -------------- | ------------------------------- |
 | `↑` `↓` / `j` `k` | move selection               |
+| `/`            | search the list                 |
 | `Enter`        | jump to that pane in tmux       |
 | `g` / `G`      | first / last                    |
 | `r`            | re-sort by activity             |
 | `q` / `Esc`    | quit                            |
+
+`/` opens [fzf](https://github.com/junegunn/fzf) when it is installed. Without
+it, the picker filters as you type: case- and accent-insensitive, so
+`sincronizacion` matches `Sincronización`, and multiple words are ANDed.
+`Enter` jumps to the highlighted match, `Esc` returns to the full list.
 
 Plain output is shaped like `ls -lht`: long-ish, human ages (`now`, `13m`,
 `3h`, `2d`), sorted by most recent activity.
