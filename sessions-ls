@@ -27,6 +27,7 @@ import sys
 import termios
 import time
 import tty
+import unicodedata
 from datetime import datetime, timezone
 from dataclasses import dataclass
 
@@ -634,14 +635,44 @@ def short_path(path: str) -> str:
     return path
 
 
+ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def strip_ansi(text: str) -> str:
+    return ANSI_RE.sub("", text)
+
+
+def cell_width(text: str) -> int:
+    """Display width in terminal cells (wide CJK glyphs take two)."""
+    width = 0
+    for ch in text:
+        if unicodedata.combining(ch):
+            continue
+        width += 2 if unicodedata.east_asian_width(ch) in ("W", "F") else 1
+    return width
+
+
 def truncate(text: str, width: int) -> str:
     if width <= 0:
         return ""
-    if len(text) <= width:
+    if cell_width(text) <= width:
         return text
     if width == 1:
         return "…"
-    return text[: width - 1] + "…"
+    out: list[str] = []
+    used = 0
+    for ch in text:
+        w = cell_width(ch)
+        if used + w > width - 1:
+            break
+        out.append(ch)
+        used += w
+    return "".join(out) + "…"
+
+
+def pad(text: str, width: int) -> str:
+    """Pad *text* (assumed ANSI-free) with spaces up to *width* cells."""
+    return text + " " * max(0, width - cell_width(text))
 
 
 def plain(agents: list[Agent], header: bool = False, color: bool | None = None) -> str:
@@ -791,11 +822,11 @@ class Picker:
             summary_plain = summary
 
         left_visible = f"  {title}   {summary_plain}"
-        if len(left_visible) + len(clock) + 2 > budget:
+        if cell_width(left_visible) + cell_width(clock) + 2 > budget:
             lines = [truncate(left_visible, budget)]
         else:
-            pad = max(1, budget - len(left_visible) - len(clock) - 1)
-            lines = [f"  {header}   {summary}" + " " * pad
+            gap = max(1, budget - cell_width(left_visible) - cell_width(clock) - 1)
+            lines = [f"  {header}   {summary}" + " " * gap
                      + self.paint(clock, DIM)]
         rule = self.paint("─" * budget, DIM)
         lines.append(rule)
@@ -838,8 +869,8 @@ class Picker:
                 status = STATUS_COLORS.get(a.status, "") + status + RESET
             kind = a.kind.ljust(8)
             age = human_age(a.activity, now).rjust(4)
-            target = truncate(a.pane.target, 12).ljust(12)
-            name = truncate(a.name, name_w).ljust(name_w)
+            target = pad(truncate(a.pane.target, 12), 12)
+            name = pad(truncate(a.name, name_w), name_w)
             path = short_path(a.pane.path)
 
             line = f" {mark} {glyph} {status}"
@@ -848,13 +879,14 @@ class Picker:
             if show_age:
                 line += f" {age}"
             line += f"  {target} {name}"
-            room = budget - len(re.sub(r"\x1b\[[0-9;]*m", "", line)) - 2
+            room = budget - cell_width(strip_ansi(line)) - 2
             if room > 10:
                 line += "  " + self.paint(truncate(path, room), DIM)
-            if selected:
-                if self.color:
-                    plain_line = re.sub(r"\x1b\[[0-9;]*m", "", line)
-                    line = "\x1b[7m" + plain_line.ljust(budget) + RESET
+            if selected and self.color:
+                # Highlight the whole row, including the padding, so no
+                # leftover background survives when the cursor moves away.
+                plain_line = strip_ansi(line).rstrip()
+                line = "\x1b[7m" + pad(plain_line, budget) + RESET
             else:
                 line = line.rstrip()
             lines.append(line)
@@ -868,11 +900,20 @@ class Picker:
         if len(hint) > budget:
             hint = "  ↑↓/jk move   ⏎ jump   g/G   r resort   q quit"
         lines.append(rule)
-        lines.append(hint[:budget])
+        lines.append(truncate(hint, budget))
 
-        if not self.color:
-            lines = [line[:budget] for line in lines]
-        sys.stdout.write("\x1b[H" + "\r\n".join(lines) + "\x1b[J")
+        # Pad every row to the last usable column: a row that shrinks must
+        # erase whatever the previous frame left there.
+        rendered = []
+        for line in lines:
+            visible = strip_ansi(line)
+            if cell_width(visible) > budget:
+                line = truncate(visible, budget)
+                visible = line
+            rendered.append(
+                line + " " * max(0, budget - cell_width(visible)) + "\x1b[K"
+            )
+        sys.stdout.write("\x1b[H" + "\r\n".join(rendered) + "\x1b[J")
         sys.stdout.flush()
         self.frame += 1
 
