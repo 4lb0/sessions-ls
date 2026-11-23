@@ -70,10 +70,17 @@ awaiting claude   pausa:4.1  6h      Sincronización de datos del tablero  ~/wor
 * **opencode sessions**: read-only SQLite on
   `~/.local/share/opencode/opencode.db` (`session_v2`). The pane title is
   `OC | <session title>`, so the title (plus the pane cwd) identifies the
-  session; `time_busy` / `time_idle` give its status.
+  session; `time_busy` / `time_idle` give its status. A session with a running
+  subagent is `working` even if its own turn is idle.
 * **claude sessions**: transcripts in `~/.claude/projects/<munged-cwd>/*.jsonl`.
   The last `ai-title` entry matches the pane title; the last real transcript
   entry tells whether the turn ended.
+* **matching**: a session is claimed by at most one pane. The id passed to
+  `opencode -s` / `claude --resume` wins, then the pane title. Panes with no
+  title get a session created after their agent process started, so a second
+  agent in the same directory does not inherit the first one's name or status.
+  An opencode session that has no title yet shows its slug (e.g.
+  `playful-wizard`).
 * **prompts**: the bottom lines of the pane are checked for permission
   prompts (`approval`) and interactive question dialogs (`question`).
 
