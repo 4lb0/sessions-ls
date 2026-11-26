@@ -7,8 +7,7 @@ with its session name and status, and jump straight to the pane.
 
 ## Install
 
-Needs `tmux` and Python 3 (standard library only, nothing to install). `fzf`
-is optional: when present, `/` uses it for search.
+Needs `tmux` and Python 3 (standard library only, nothing to install).
 
 ```bash
 git clone git@github.com:4lb0/sessions-ls.git ~/self/sessions-ls
@@ -32,16 +31,21 @@ Interactive keys:
 | key            | action                          |
 | -------------- | ------------------------------- |
 | `↑` `↓` / `j` `k` | move selection               |
-| `/`            | search the list                 |
+| `1`…`9`, `0`   | jump to the 1st…10th row        |
+| `/`            | filter the list                 |
 | `Enter`        | jump to that pane in tmux       |
 | `g` / `G`      | first / last                    |
 | `r`            | re-sort by activity             |
 | `q` / `Esc`    | quit                            |
 
-`/` opens [fzf](https://github.com/junegunn/fzf) when it is installed. Without
-it, the picker filters as you type: case- and accent-insensitive, so
-`sincronizacion` matches `Sincronización`, and multiple words are ANDed.
-`Enter` jumps to the highlighted match, `Esc` returns to the full list.
+The first ten rows carry a shortcut: `1` to `9`, and `0` for the tenth. The
+number is the position in what is on screen, so after filtering `2` is the
+second match. Rows below the tenth have no shortcut.
+
+`/` filters as you type: case- and accent-insensitive, so `sincronizacion`
+matches `Sincronización`, and multiple words are ANDed. While filtering, a
+number still picks from the filtered list, `Enter` jumps to the highlighted
+match, `Esc` returns to the full list.
 
 Plain output is shaped like `ls -lht`: long-ish, human ages (`now`, `13m`,
 `3h`, `2d`), sorted by most recent activity.
@@ -61,6 +65,9 @@ awaiting claude   pausa:4.1  6h      Sincronización de datos del tablero  ~/wor
 | `question` | the agent asked you a question, the dialog is on screen    |
 | `approval` | a permission prompt is on screen, the agent is blocked    |
 | `unknown`  | process found but its session could not be read           |
+
+On a narrow terminal the status is abbreviated (`awa`, `wor`, `ask`) and the
+agent kind / age columns are dropped before the session name is cut.
 
 ## How it works
 
